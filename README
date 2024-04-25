@@ -1,4 +1,5 @@
-# NMF Tutorial
- Non-negative matrix factorization- Ting and Chvatal
+# NMF-tutorial
+  
+Non-negative matrix factorization- Ting and Chvatal
 - This is companion material for a chapter entitled “Muscle synergy analysis for posture and movement: methods and interpretation” by Ting and Chvatal, in Progress in Motor Control, Danion and Latash, eds., 2010. 
 - We use intuitive tutorials to compare the different properties of principal components analysis and non-negative matrix factorization in the decomposition of electromyographic data.
