@@ -174,7 +174,7 @@ function pushbutton3_Callback(hObject, eventdata, handles)
 % hObject    handle to pushbutton3 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
+disp("Extracting NMF")
 global DATAsrc numsyn_nmf synergy_nmf
 
 synergy_nmf={};
@@ -192,7 +192,7 @@ synergy_nmf={};
 [numsyn_nmf]=choosesyns(DATAsrc,synergy_nmf);
 set(handles.NMF_nsyn_toplot,'String',num2str(numsyn_nmf)); %set default number of synergies to plot
 set(handles.PCA_nsyn_toplot,'String',num2str(numsyn_nmf)); %set default number of synergies to plot
-
+disp("Done Extracting")
 
 function NMF_nsyn_toplot_Callback(hObject, eventdata, handles)
 % hObject    handle to NMF_nsyn_toplot (see GCBO)
@@ -338,6 +338,7 @@ axis([0 nmus 40 100])
 
 % --- Executes on button press in pushbutton4.
 function pushbutton4_Callback(hObject, eventdata, handles)
+disp("Extracting PCA")
 % hObject    handle to pushbutton4 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -348,13 +349,14 @@ global DATAsrc COEFF SCORE pcvars
 % stdev = std(DATAsrc');
 % DATAsrc = diag(1./stdev)*DATAsrc;
 
-[COEFF,SCORE,pcvars] = princomp(DATAsrc','econ');
+% [COEFF,SCORE,pcvars] = princomp(DATAsrc','econ');
+[COEFF, SCORE, pcvars] = pca(DATAsrc', "Economy",true);
 
 % %undo the unit variance scaling so synergies are back out of unit variance
 % %space and in the same scaling as the input data was
 % DATAsrc = diag(stdev)*DATAsrc;
 % COEFF = diag(stdev)*COEFF;
-
+disp("Done Extracting")
 
 function PCA_nsyn_toplot_Callback(hObject, eventdata, handles)
 % hObject    handle to PCA_nsyn_toplot (see GCBO)
