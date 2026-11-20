@@ -6,15 +6,17 @@ Non-negative matrix factorization- Ting and Chvatal
 
 ## Interactive web pages (no MATLAB needed)
 
-Each page is a single self-contained HTML file. Open it in any web browser. The fonts load from the internet; everything else works offline.
+**Open them online: [https://neuromechanics-lab.github.io/NMF-tutorial/](https://neuromechanics-lab.github.io/NMF-tutorial/)**
 
-explorer-2D-synergy-sandbox.html (Figure 5.2)
+Each page is a single self-contained HTML file. You can also download one and open it in any web browser. The fonts load from the internet; everything else works offline.
+
+[explorer-2D-synergy-sandbox.html](https://neuromechanics-lab.github.io/NMF-tutorial/explorer-2D-synergy-sandbox.html) (Figure 5.2)
 Browser version of PCA_example_GUI_2D.m. Two made-up synergies (editable W matrix) are mixed to make 2-muscle data. Move the C1/C2 weight sliders, add a second data set, or change the number of points, and see how NMF and PCA recover the synergies side by side. NMF and PCA run live in the browser.
 
-explorer-postural-synergies.html (Figure 5.4)
+[explorer-postural-synergies.html](https://neuromechanics-lab.github.io/NMF-tutorial/explorer-postural-synergies.html) (Figure 5.4)
 Browser version of PosturalData_NMFvsPCA_GUI_July2013.m for example_postural_data.mat (16 muscles, 12 perturbation directions, 5 trials, 4 time bins). Choose NMF or PCA, the number of synergies, the time bin and the trial. Shows VAF vs. number of synergies (with 95% bootstrap CIs for real and shuffled data), synergy weights and tuning curves, per-muscle reconstructions with VAF and r², and the muscle tuning curves.
 
-explorer-walking-synergies.html (Figure 5.6)
+[explorer-walking-synergies.html](https://neuromechanics-lab.github.io/NMF-tutorial/explorer-walking-synergies.html) (Figure 5.6)
 Same as the postural page, for example_walking_data.mat (16 muscles, about 6.7 s of walking). Activations and reconstructions are plotted over time, with a zoomable time window.
 
 The NMF, PCA and bootstrap results on the postural and walking pages were computed once in MATLAB with the same code as the GUI and stored in the page, so the numbers do not change between visits. With the 90% overall VAF / 75% per-muscle VAF criterion, NMF picks 5 synergies for the postural data and 7 for the walking data.

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NMF Tutorial Explorers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #f5f6f4; --surface: #ffffff; --fg: #1b211f; --muted: #5d6a66; --line: #d9dfdc; --accent: #2958c9;
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121615; --surface: #1a201e; --fg: #e6ebe9; --muted: #95a39e; --line: #2c3532; --accent: #7ba0ff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121615; --surface: #1a201e; --fg: #e6ebe9; --muted: #95a39e; --line: #2c3532; --accent: #7ba0ff;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.55 var(--font-body); padding: 40px 16px 64px; }
+.wrap { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+.eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0; }
+h1 { font-family: var(--font-display); font-weight: 650; font-size: clamp(28px, 5vw, 38px); line-height: 1.1; letter-spacing: -0.01em; margin: 6px 0 10px; text-wrap: balance; }
+.lede { color: var(--muted); margin: 0; max-width: 65ch; }
+a { color: var(--accent); }
+ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.card { display: block; text-decoration: none; color: inherit; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; transition: border-color .15s; }
+.card:hover, .card:focus-visible { border-color: var(--accent); }
+.card h2 { font-family: var(--font-display); font-weight: 500; font-size: 21px; margin: 0 0 4px; color: var(--accent); }
+.card .fig { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.card p { margin: 6px 0 0; color: var(--muted); }
+footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 16px; }
+</style>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">NMF tutorial · interactive figures</p>
+    <h1>Muscle synergy explorers</h1>
+    <p class="lede">Browser versions of the MATLAB tutorials that go with Ting &amp; Chvatal (2011), "Decomposing muscle activity in motor tasks: methods and interpretation." Compare how principal components analysis (PCA) and non-negative matrix factorization (NMF) break down EMG data. No MATLAB needed.</p>
+  </header>
+
+  <ul>
+    <li><a class="card" href="explorer-2D-synergy-sandbox.html">
+      <span class="fig">Figure 5.2</span>
+      <h2>2D synergy sandbox</h2>
+      <p>Mix two made-up synergies into 2-muscle data, change the weights and number of points, and watch NMF and PCA recover the synergies side by side.</p>
+    </a></li>
+    <li><a class="card" href="explorer-postural-synergies.html">
+      <span class="fig">Figure 5.4</span>
+      <h2>Postural synergies</h2>
+      <p>16 muscles, 12 perturbation directions. Choose NMF or PCA and the number of synergies, then see VAF curves, synergy weights, tuning curves and per-muscle reconstructions.</p>
+    </a></li>
+    <li><a class="card" href="explorer-walking-synergies.html">
+      <span class="fig">Figure 5.6</span>
+      <h2>Walking synergies</h2>
+      <p>The same analysis for about 6.7 s of walking EMG, with activations and reconstructions plotted over time in a zoomable window.</p>
+    </a></li>
+  </ul>
+
+  <footer>
+    Source code, MATLAB GUIs and example data: <a href="https://github.com/Neuromechanics-Lab/NMF-tutorial">github.com/Neuromechanics-Lab/NMF-tutorial</a> ·
+    <a href="https://scholarblogs.emory.edu/neuromechanicslab/files/2024/07/Ting-and-Chvatal-2010.pdf">Chapter PDF</a>
+  </footer>
+</div>
+</body>
+</html>
