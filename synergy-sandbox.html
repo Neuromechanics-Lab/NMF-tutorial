@@ -1,0 +1,446 @@
+<meta charset="utf-8">
+<title>Synergy Extraction Sandbox</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: control strip on top, then three parallel lab panels (defined / NMF / PCA) with identical anatomy */
+:root {
+  --bg: #f5f6f4;
+  --surface: #ffffff;
+  --fg: #1b211f;
+  --muted: #5d6a66;
+  --line: #d9dfdc;
+  --grid: #e8ecea;
+  --syn1: #2958c9;
+  --syn2: #1d8a5a;
+  --pt-a: #4a5552;
+  --pt-b: #c0622a;
+  --focus: #2958c9;
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121615; --surface: #1a201e; --fg: #e6ebe9; --muted: #95a39e; --line: #2c3532; --grid: #232b28;
+    --syn1: #7ba0ff; --syn2: #4fc68e; --pt-a: #b5c0bc; --pt-b: #f0915a; --focus: #7ba0ff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121615; --surface: #1a201e; --fg: #e6ebe9; --muted: #95a39e; --line: #2c3532; --grid: #232b28;
+  --syn1: #7ba0ff; --syn2: #4fc68e; --pt-a: #b5c0bc; --pt-b: #f0915a; --focus: #7ba0ff;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 48px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+header { display: flex; flex-direction: column; gap: 6px; }
+h1 { font-family: var(--font-display); font-weight: 650; font-size: clamp(26px, 4vw, 36px); line-height: 1.1; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+.lede { color: var(--muted); max-width: 70ch; margin: 0; }
+.eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+
+/* Controls */
+.controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+.group { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.group h2 { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; margin: 0; color: var(--muted); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.row { display: grid; grid-template-columns: 74px 1fr 46px; align-items: center; gap: 10px; }
+.row label { font-size: 13px; }
+.row output { font-family: var(--font-mono); font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
+input[type="range"] { width: 100%; accent-color: var(--focus); }
+.wtable { display: grid; grid-template-columns: 34px 1fr 1fr; gap: 6px 8px; align-items: center; font-size: 13px; }
+.wtable .h { font-family: var(--font-mono); font-size: 11px; color: var(--muted); text-align: center; }
+.wtable .h.s1 { color: var(--syn1); } .wtable .h.s2 { color: var(--syn2); }
+input[type="number"] { width: 100%; min-width: 0; font: 13px var(--font-mono); padding: 5px 7px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--fg); font-variant-numeric: tabular-nums; }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; }
+button { font: 500 13px var(--font-body); padding: 7px 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); cursor: pointer; }
+button:hover { border-color: var(--muted); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--fg); cursor: pointer; }
+.group.off .row { opacity: 0.45; }
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; vertical-align: 0; margin-right: 4px; }
+
+/* Panels */
+.panels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 900px) { .panels { grid-template-columns: 1fr; } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.panel h3 { font-family: var(--font-display); font-weight: 500; font-size: 20px; margin: 0; line-height: 1.2; }
+.panel .sub { color: var(--muted); font-size: 12.5px; margin: -6px 0 0; min-height: 2.6em; }
+.scatter { width: 100%; aspect-ratio: 1 / 1; max-width: 100%; display: block; }
+.bars { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.bar { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.bar canvas { width: 100%; height: 110px; display: block; }
+.bar .cap { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.bar .cap b { font-weight: 500; }
+.bar.s1 .cap b { color: var(--syn1); } .bar.s2 .cap b { color: var(--syn2); }
+.meta { font-family: var(--font-mono); font-size: 11px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 8px; }
+
+.notes { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px 20px; }
+.notes h2 { font-family: var(--font-display); font-weight: 500; font-size: 19px; margin: 0 0 6px; }
+.notes ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; max-width: 80ch; }
+.notes p { margin: 10px 0 0; color: var(--muted); font-size: 12.5px; }
+.cite { font-size: 12.5px; color: var(--muted); max-width: 80ch; margin: 4px 0 0; }
+.cite a { color: var(--fg); text-underline-offset: 2px; }
+.cite a:focus-visible { outline: 2px solid var(--nmf, var(--focus)); outline-offset: 2px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Ting &amp; Chvatal · Figure 5.2 · 2-muscle example</span>
+    <h1>Synergy Extraction Sandbox</h1>
+    <p class="lede">Two made-up muscle synergies mix to produce 2-muscle activation data. Adjust how strongly each synergy is recruited, then compare what non-negative matrix factorization (NMF) and principal components analysis (PCA) pull back out of the data. Everything updates as you move the controls.</p>
+  <p class="cite">This page recreates <b>Figure 5.2</b> from Ting, L.H., Chvatal, S.A. (2011) “Decomposing muscle activity in motor tasks: methods and interpretation.” In: <i>Motor Control: Theories, Experiments, and Applications</i>, Danion, F., Latash, M.L., eds. Oxford University Press, New York. <a href="https://scholarblogs.emory.edu/neuromechanicslab/files/2024/07/Ting-and-Chvatal-2010.pdf" target="_blank" rel="noopener">Download PDF</a></p>
+  </header>
+
+  <section class="controls" aria-label="Controls">
+    <div class="group">
+      <h2>Defined synergies W</h2>
+      <div class="wtable">
+        <span></span><span class="h s1">W1</span><span class="h s2">W2</span>
+        <span>M1</span><input id="w11" type="number" step="0.05" min="0" value="0.5"><input id="w12" type="number" step="0.05" min="0" value="1">
+        <span>M2</span><input id="w21" type="number" step="0.05" min="0" value="1"><input id="w22" type="number" step="0.05" min="0" value="0.5">
+      </div>
+      <div class="btns"><button id="resetW" type="button">Restore chapter example</button></div>
+    </div>
+
+    <div class="group" id="gA">
+      <h2><span><span class="dot" style="background:var(--pt-a)"></span>Data set 1</span></h2>
+      <div class="row"><label for="a1">C1 weight</label><input id="a1" type="range" min="0" max="1" step="0.01" value="1"><output id="a1o"></output></div>
+      <div class="row"><label for="a2">C2 weight</label><input id="a2" type="range" min="0" max="1" step="0.01" value="0.15"><output id="a2o"></output></div>
+    </div>
+
+    <div class="group" id="gB">
+      <h2><span><span class="dot" style="background:var(--pt-b)"></span>Data set 2</span>
+        <label class="toggle"><input id="bOn" type="checkbox" checked> Include</label></h2>
+      <div class="row"><label for="b1">C1 weight</label><input id="b1" type="range" min="0" max="1" step="0.01" value="0.15"><output id="b1o"></output></div>
+      <div class="row"><label for="b2">C2 weight</label><input id="b2" type="range" min="0" max="1" step="0.01" value="1"><output id="b2o"></output></div>
+    </div>
+
+    <div class="group">
+      <h2>Sampling</h2>
+      <div class="row"><label for="np">Points</label><input id="np" type="range" min="10" max="500" step="10" value="100"><output id="npo"></output></div>
+      <div class="btns">
+        <button id="resample" type="button">New random C</button>
+        <button id="rerunNmf" type="button">Re-run NMF</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="panels" aria-label="Results">
+    <article class="panel">
+      <h3>Defined</h3>
+      <p class="sub">Data = W × C. Lines show the true synergy vectors.</p>
+      <canvas class="scatter" id="scDef" aria-label="Scatter of muscle 1 vs muscle 2 activation with defined synergy vectors"></canvas>
+      <div class="bars">
+        <div class="bar s1"><canvas id="bDef1"></canvas><div class="cap"><b>W1</b><span id="vDef1"></span></div></div>
+        <div class="bar s2"><canvas id="bDef2"></canvas><div class="cap"><b>W2</b><span id="vDef2"></span></div></div>
+      </div>
+      <div class="meta" id="mDef"></div>
+    </article>
+
+    <article class="panel">
+      <h3>NMF</h3>
+      <p class="sub">2 synergies, multiplicative updates, unit-variance scaling. Vectors normalized to max 1.</p>
+      <canvas class="scatter" id="scNmf" aria-label="Scatter with NMF synergy vectors"></canvas>
+      <div class="bars">
+        <div class="bar s1"><canvas id="bNmf1"></canvas><div class="cap"><b>W1</b><span id="vNmf1"></span></div></div>
+        <div class="bar s2"><canvas id="bNmf2"></canvas><div class="cap"><b>W2</b><span id="vNmf2"></span></div></div>
+      </div>
+      <div class="meta" id="mNmf"></div>
+    </article>
+
+    <article class="panel">
+      <h3>PCA</h3>
+      <p class="sub">Eigenvectors of the mean-centered covariance (MATLAB <code>pca</code>). Unit length.</p>
+      <canvas class="scatter" id="scPca" aria-label="Scatter with PCA component vectors"></canvas>
+      <div class="bars">
+        <div class="bar s1"><canvas id="bPca1"></canvas><div class="cap"><b>PC1</b><span id="vPca1"></span></div></div>
+        <div class="bar s2"><canvas id="bPca2"></canvas><div class="cap"><b>PC2</b><span id="vPca2"></span></div></div>
+      </div>
+      <div class="meta" id="mPca"></div>
+    </article>
+  </section>
+
+  <section class="notes">
+    <h2>What to look for</h2>
+    <ul>
+      <li>When the data fill the wedge between the two synergies, NMF recovers the defined W1 and W2 (possibly in swapped order). PCA vectors are always orthogonal, so they cannot line up with synergies that are not at 90° to each other.</li>
+      <li>PC1 points along the direction of greatest variance and PC2 is forced perpendicular to it. PC2 can have a negative muscle weight, which has no physiological meaning for muscle activation.</li>
+      <li>Set one data set's weights near equal and turn the other off. The data collapse toward one direction and NMF no longer has the wedge edges to find; try Re-run NMF to see the solution change with the random start.</li>
+      <li>The percentages differ in meaning. NMF reports each synergy's share of the summed reconstruction; PCA reports each component's share of the variance about the mean.</li>
+    </ul>
+    <p>Browser port of PCA_example_GUI_2D.m from the MATLAB tutorial that accompanies Ting &amp; Chvatal, “Decomposing muscle activity in motor tasks: methods and interpretation.” The NMF stopping rules match the MATLAB script.</p>
+  </section>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+
+  // ---------- seeded RNG ----------
+  function mulberry32(a) {
+    return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  }
+  let cSeed = 20101, nmfSeed = 7;
+
+  // ---------- NMF (port of pushbutton3_Callback) ----------
+  function nmf(V, r, rand) {
+    const n = V.length;
+    // drop all-zero conditions (columns)
+    const keep = [];
+    for (let j = 0; j < V[0].length; j++) { let s = 0; for (let i = 0; i < n; i++) s += Math.max(0, V[i][j]); if (s > 0) keep.push(j); }
+    const m = keep.length;
+    if (m < 2) return null;
+    const X = V.map(row => keep.map(j => Math.max(0, row[j])));
+    // unit-variance scaling
+    const sd = X.map(row => { const mu = row.reduce((a, b) => a + b, 0) / m; const v = row.reduce((a, b) => a + (b - mu) ** 2, 0) / (m - 1); return Math.sqrt(v) || 1; });
+    for (let i = 0; i < n; i++) for (let j = 0; j < m; j++) X[i][j] /= sd[i];
+
+    const pos = () => { let x = 0; while (x === 0) x = rand(); return x; };
+    let H = Array.from({ length: r }, () => Array.from({ length: m }, pos));
+    let W = Array.from({ length: n }, () => Array.from({ length: r }, pos));
+
+    const recErr = () => { let e = 0; for (let i = 0; i < n; i++) for (let j = 0; j < m; j++) { let s = 0; for (let k = 0; k < r; k++) s += W[i][k] * H[k][j]; e += (X[i][j] - s) ** 2; } return e; };
+    let err = recErr();
+    const ERR_GOAL = 0.0001 * n * m, MAX_IT = 100000;
+    const errs = [];
+    let stop = 'error goal reached';
+    while (err > ERR_GOAL) {
+      // H = H .* (W'X) ./ (W'W H)
+      const WtW = [...Array(r)].map((_, a) => [...Array(r)].map((_, b) => { let s = 0; for (let i = 0; i < n; i++) s += W[i][a] * W[i][b]; return s; }));
+      for (let j = 0; j < m; j++) {
+        const num = [], den = [];
+        for (let a = 0; a < r; a++) { let s = 0; for (let i = 0; i < n; i++) s += W[i][a] * X[i][j]; num[a] = s; let d = 0; for (let b = 0; b < r; b++) d += WtW[a][b] * H[b][j]; den[a] = d; }
+        for (let a = 0; a < r; a++) H[a][j] *= num[a] / den[a];
+      }
+      // W = W .* (X H') ./ (W H H')
+      const HHt = [...Array(r)].map((_, a) => [...Array(r)].map((_, b) => { let s = 0; for (let j = 0; j < m; j++) s += H[a][j] * H[b][j]; return s; }));
+      for (let i = 0; i < n; i++) {
+        const num = [], den = [];
+        for (let a = 0; a < r; a++) { let s = 0; for (let j = 0; j < m; j++) s += X[i][j] * H[a][j]; num[a] = s; let d = 0; for (let b = 0; b < r; b++) d += W[i][b] * HHt[b][a]; den[a] = d; }
+        for (let a = 0; a < r; a++) W[i][a] *= num[a] / den[a];
+      }
+      err = recErr();
+      errs.push(err);
+      if (!isFinite(err)) { stop = 'diverged'; break; }
+      if (errs.length > 550) {
+        const old = errs[errs.length - 501];
+        if (Math.abs((old - err) / old) < 0.01) { stop = 'error changed < 1% over 500 iterations'; break; }
+      }
+      if (errs.length > MAX_IT) { stop = 'maximum iterations'; break; }
+    }
+    const iters = errs.length;
+    // undo scaling, normalize each synergy to max 1
+    for (let i = 0; i < n; i++) for (let a = 0; a < r; a++) W[i][a] *= sd[i];
+    for (let a = 0; a < r; a++) {
+      let mx = 0; for (let i = 0; i < n; i++) mx = Math.max(mx, W[i][a]);
+      if (mx > 0) { for (let i = 0; i < n; i++) W[i][a] /= mx; for (let j = 0; j < m; j++) H[a][j] *= mx; }
+    }
+    // contribution of each synergy to the summed reconstruction
+    const parts = []; let total = 0;
+    for (let a = 0; a < r; a++) { let s = 0; for (let i = 0; i < n; i++) for (let j = 0; j < m; j++) s += W[i][a] * H[a][j]; parts.push(s); total += s; }
+    return { W, contrib: parts.map(p => 100 * p / total), iters, stop };
+  }
+
+  // ---------- PCA on 2 x N data (port of pca(DATA')) ----------
+  function pca2(D) {
+    const N = D[0].length;
+    const mu = D.map(r => r.reduce((a, b) => a + b, 0) / N);
+    let a = 0, b = 0, c = 0;
+    for (let j = 0; j < N; j++) { const x = D[0][j] - mu[0], y = D[1][j] - mu[1]; a += x * x; b += x * y; c += y * y; }
+    a /= N - 1; b /= N - 1; c /= N - 1;
+    const tr = (a + c) / 2, disc = Math.sqrt(((a - c) / 2) ** 2 + b * b);
+    const l1 = tr + disc, l2 = Math.max(0, tr - disc);
+    let v1;
+    if (Math.abs(b) > 1e-14) v1 = [b, l1 - a];
+    else v1 = a >= c ? [1, 0] : [0, 1];
+    const nrm = Math.hypot(v1[0], v1[1]); v1 = [v1[0] / nrm, v1[1] / nrm];
+    let v2 = [-v1[1], v1[0]];
+    // MATLAB sign convention: largest-magnitude element of each coefficient vector is positive
+    const fix = v => { const k = Math.abs(v[0]) >= Math.abs(v[1]) ? 0 : 1; return v[k] < 0 ? [-v[0], -v[1]] : v; };
+    v1 = fix(v1); v2 = fix(v2);
+    const tot = l1 + l2;
+    return { W: [[v1[0], v2[0]], [v1[1], v2[1]]], vaf: tot > 0 ? [100 * l1 / tot, 100 * l2 / tot] : [0, 0] };
+  }
+
+  // ---------- drawing ----------
+  const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  function prep(cv) {
+    const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+    const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+    return { ctx, w, h };
+  }
+  const niceStep = span => { const raw = span / 5, p = 10 ** Math.floor(Math.log10(raw)), f = raw / p; return (f < 1.5 ? 1 : f < 3.5 ? 2 : f < 7.5 ? 5 : 10) * p; };
+
+  function scatter(cv, sets, vecs, dashed, range) {
+    const { ctx, w, h } = prep(cv);
+    const padL = 38, padB = 30, padT = 10, padR = 10;
+    const size = Math.min(w - padL - padR, h - padT - padB);
+    const ox = padL, oy = padT + size;
+    const [lo, hi] = range;
+    const sx = v => ox + (v - lo) / (hi - lo) * size, sy = v => oy - (v - lo) / (hi - lo) * size;
+    const step = niceStep(hi - lo);
+    ctx.font = `11px ${css('--font-mono')}`; ctx.lineWidth = 1;
+    for (let t = Math.ceil(lo / step) * step; t <= hi + 1e-9; t += step) {
+      const isZero = Math.abs(t) < 1e-9;
+      ctx.strokeStyle = isZero ? css('--muted') : css('--grid');
+      ctx.beginPath(); ctx.moveTo(sx(t), padT); ctx.lineTo(sx(t), oy); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(ox, sy(t)); ctx.lineTo(ox + size, sy(t)); ctx.stroke();
+      ctx.fillStyle = css('--muted');
+      const lab = +t.toFixed(2) + '';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(lab, sx(t), oy + 5);
+      ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillText(lab, ox - 6, sy(t));
+    }
+    ctx.strokeStyle = css('--line'); ctx.strokeRect(ox, padT, size, size);
+    ctx.fillStyle = css('--muted'); ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+    ctx.fillText('M1 →', ox + size, oy + padB);
+    ctx.save(); ctx.translate(11, padT); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'right'; ctx.textBaseline = 'top'; ctx.fillText('M2 →', 0, -8); ctx.restore();
+
+    ctx.save(); ctx.beginPath(); ctx.rect(ox, padT, size, size); ctx.clip();
+    for (const s of sets) {
+      ctx.fillStyle = s.color; ctx.globalAlpha = 0.7;
+      for (let j = 0; j < s.D[0].length; j++) { ctx.beginPath(); ctx.arc(sx(s.D[0][j]), sy(s.D[1][j]), 2.4, 0, 7); ctx.fill(); }
+    }
+    ctx.globalAlpha = 1;
+    if (dashed) {
+      ctx.setLineDash([4, 4]); ctx.lineWidth = 1.2;
+      dashed.forEach(v => { ctx.strokeStyle = css('--muted'); ctx.beginPath(); ctx.moveTo(sx(0), sy(0)); ctx.lineTo(sx(v.x * 10), sy(v.y * 10)); ctx.stroke(); });
+      ctx.setLineDash([]);
+    }
+    for (const v of vecs) {
+      ctx.strokeStyle = v.color; ctx.fillStyle = v.color; ctx.lineWidth = 2.5;
+      const x0 = sx(0), y0 = sy(0), x1 = sx(v.x), y1 = sy(v.y);
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+      const ang = Math.atan2(y1 - y0, x1 - x0), L = 9;
+      if (Math.hypot(x1 - x0, y1 - y0) > 12) {
+        ctx.beginPath(); ctx.moveTo(x1, y1);
+        ctx.lineTo(x1 - L * Math.cos(ang - 0.4), y1 - L * Math.sin(ang - 0.4));
+        ctx.lineTo(x1 - L * Math.cos(ang + 0.4), y1 - L * Math.sin(ang + 0.4)); ctx.closePath(); ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
+  function bars(cv, vals, color, lo) {
+    const { ctx, w, h } = prep(cv);
+    const padT = 6, padB = 18, padL = 26, padR = 4;
+    const ph = h - padT - padB, pw = w - padL - padR;
+    const hi = 1;
+    const sy = v => padT + (hi - v) / (hi - lo) * ph;
+    ctx.font = `10.5px ${css('--font-mono')}`; ctx.lineWidth = 1;
+    const ticks = lo < 0 ? [-1, 0, 1] : [0, 0.5, 1];
+    for (const t of ticks) {
+      ctx.strokeStyle = t === 0 ? css('--muted') : css('--grid');
+      ctx.beginPath(); ctx.moveTo(padL, sy(t)); ctx.lineTo(w - padR, sy(t)); ctx.stroke();
+      ctx.fillStyle = css('--muted'); ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillText(t, padL - 5, sy(t));
+    }
+    const bw = pw / vals.length;
+    vals.forEach((v, i) => {
+      const x = padL + i * bw + bw * 0.2, bwid = bw * 0.6, vv = Math.max(lo, Math.min(hi, v));
+      ctx.fillStyle = color;
+      const y0 = sy(0), y1 = sy(vv);
+      ctx.fillRect(x, Math.min(y0, y1), bwid, Math.max(1, Math.abs(y1 - y0)));
+      ctx.fillStyle = css('--muted'); ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText('M' + (i + 1), x + bwid / 2, h - padB + 4);
+    });
+  }
+
+  // ---------- state & compute ----------
+  const DEF_W = [[0.5, 1], [1, 0.5]];
+  let cache = { key: null, nmf: null };
+
+  function readW() {
+    const g = id => Math.max(0, parseFloat($(id).value) || 0);
+    return [[g('w11'), g('w12')], [g('w21'), g('w22')]];
+  }
+  function makeData(W, C, k1, k2) {
+    return [0, 1].map(i => C[0].map((_, j) => W[i][0] * C[0][j] * k1 + W[i][1] * C[1][j] * k2));
+  }
+  const fmtVec = col => '[' + col.map(v => v.toFixed(2)).join(', ') + ']';
+
+  function update() {
+    const W = readW();
+    const n = +$('np').value;
+    const rnd = mulberry32(cSeed);
+    const C = [Array.from({ length: n }, rnd), Array.from({ length: n }, rnd)];
+    const a1 = +$('a1').value, a2 = +$('a2').value, b1 = +$('b1').value, b2 = +$('b2').value, bOn = $('bOn').checked;
+    for (const [id, v] of [['a1', a1], ['a2', a2], ['b1', b1], ['b2', b2]]) $(id + 'o').textContent = v.toFixed(2);
+    $('npo').textContent = n;
+    $('gB').classList.toggle('off', !bOn);
+
+    const DA = makeData(W, C, a1, a2);
+    const DB = bOn ? makeData(W, C, b1, b2) : null;
+    const DATA = bOn ? [DA[0].concat(DB[0]), DA[1].concat(DB[1])] : DA;
+    const sets = [{ D: DA, color: css('--pt-a') }];
+    if (bOn) sets.push({ D: DB, color: css('--pt-b') });
+
+    const key = JSON.stringify([W, n, cSeed, a1, a2, b1, b2, bOn, nmfSeed]);
+    if (cache.key !== key) { cache = { key, nmf: nmf(DATA, 2, mulberry32(nmfSeed)), pca: pca2(DATA) }; }
+    const N = cache.nmf, P = cache.pca;
+
+    // shared, equal-aspect axis range across all three scatters
+    let lo = 0, hi = 0.5;
+    for (const r of DATA) for (const v of r) hi = Math.max(hi, v);
+    const vecPts = [];
+    for (let k = 0; k < 2; k++) {
+      vecPts.push(W[0][k], W[1][k], P.W[0][k], P.W[1][k]);
+      if (N) vecPts.push(N.W[0][k], N.W[1][k]);
+    }
+    for (const v of vecPts) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+    const span = hi - lo; lo -= lo < 0 ? span * 0.06 : 0; hi += span * 0.06;
+    const range = [lo, hi];
+
+    const s1 = css('--syn1'), s2 = css('--syn2');
+    const col = (M, k) => [M[0][k], M[1][k]];
+    const vec = (M, k, c) => ({ x: M[0][k], y: M[1][k], color: c });
+    const trueDirs = [{ x: W[0][0], y: W[1][0] }, { x: W[0][1], y: W[1][1] }];
+
+    // Defined
+    scatter($('scDef'), sets, [vec(W, 0, s1), vec(W, 1, s2)], null, range);
+    bars($('bDef1'), col(W, 0), s1, 0); bars($('bDef2'), col(W, 1), s2, 0);
+    $('vDef1').textContent = fmtVec(col(W, 0)); $('vDef2').textContent = fmtVec(col(W, 1));
+    $('mDef').textContent = `${DATA[0].length} points · ${bOn ? '2 data sets' : '1 data set'}`;
+
+    // NMF
+    if (N) {
+      scatter($('scNmf'), sets, [vec(N.W, 0, s1), vec(N.W, 1, s2)], trueDirs, range);
+      bars($('bNmf1'), col(N.W, 0), s1, 0); bars($('bNmf2'), col(N.W, 1), s2, 0);
+      $('vNmf1').textContent = `${fmtVec(col(N.W, 0))} · ${Math.round(N.contrib[0])}%`;
+      $('vNmf2').textContent = `${fmtVec(col(N.W, 1))} · ${Math.round(N.contrib[1])}%`;
+      $('mNmf').textContent = `${N.iters} iterations · stopped: ${N.stop} · dashed = true synergy directions`;
+    } else {
+      scatter($('scNmf'), sets, [], trueDirs, range);
+      bars($('bNmf1'), [0, 0], s1, 0); bars($('bNmf2'), [0, 0], s2, 0);
+      $('vNmf1').textContent = '–'; $('vNmf2').textContent = '–';
+      $('mNmf').textContent = 'All data are zero. Raise a C weight above 0 to extract synergies.';
+    }
+
+    // PCA
+    scatter($('scPca'), sets, [vec(P.W, 0, s1), vec(P.W, 1, s2)], trueDirs, range);
+    bars($('bPca1'), col(P.W, 0), s1, -1); bars($('bPca2'), col(P.W, 1), s2, -1);
+    $('vPca1').textContent = `${fmtVec(col(P.W, 0))} · ${Math.round(P.vaf[0])}%`;
+    $('vPca2').textContent = `${fmtVec(col(P.W, 1))} · ${Math.round(P.vaf[1])}%`;
+    const angle = (u, v) => Math.acos(Math.min(1, Math.abs(u[0] * v[0] + u[1] * v[1]) / (Math.hypot(...u) * Math.hypot(...v) || 1))) * 180 / Math.PI;
+    $('mPca').textContent = `angle between PCs: 90° · between defined synergies: ${Math.round(angle(col(W, 0), col(W, 1)))}° · dashed = true synergy directions`;
+  }
+
+  let raf = 0;
+  const schedule = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(update); };
+  document.querySelectorAll('input').forEach(el => el.addEventListener('input', schedule));
+  $('resample').addEventListener('click', () => { cSeed = (Math.random() * 2 ** 31) | 0; schedule(); });
+  $('rerunNmf').addEventListener('click', () => { nmfSeed = (Math.random() * 2 ** 31) | 0; schedule(); });
+  $('resetW').addEventListener('click', () => { $('w11').value = DEF_W[0][0]; $('w12').value = DEF_W[0][1]; $('w21').value = DEF_W[1][0]; $('w22').value = DEF_W[1][1]; schedule(); });
+  new ResizeObserver(schedule).observe(document.querySelector('.panels'));
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', schedule);
+  new MutationObserver(schedule).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedule);
+  update();
+})();
+</script>
