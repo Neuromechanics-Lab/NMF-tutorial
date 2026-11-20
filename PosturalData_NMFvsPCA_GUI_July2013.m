@@ -56,6 +56,8 @@ function PosturalData_NMFvsPCA_GUI_July2013_OpeningFcn(hObject, eventdata, handl
 handles.output = hObject;
 
 set(hObject,'toolbar','figure');
+% Compact layout: data row on top, NMF and PCA columns side by side, status line below
+handles=compact_layout(hObject,handles);
 % Update handles structure
 guidata(hObject, handles);
 
@@ -111,6 +113,12 @@ else
 %     DATA_LST(14:16,:)=[];
 %     nmus=13; ncond=12; ntrials=3; nbins=3;
 end
+if checkwalk==1, dname='walking'; else, dname='postural'; end
+% Default number of synergies to plot: 5 for postural data, 7 for walking data
+if checkwalk==1, nsyn_default='7'; else, nsyn_default='5'; end
+set(handles.NMF_nsyn_toplot,'String',nsyn_default);
+set(handles.PCA_nsyn_toplot,'String',nsyn_default);
+set_status(handles,sprintf('Loaded %s data: %d muscles x %d samples, %s synergies by default. Next: Plot Data or Extract NMF.',dname,size(DATAsrc,1),size(DATAsrc,2),nsyn_default));
 
 
 
@@ -134,6 +142,7 @@ elseif checkwalk==1
     nmus=size(DATAsrc,1);
 end
 
+set_status(handles,'Plotting data...');
 figure
 for i=1:nmus
     if checkwalk==0 %Plot tuning curves for postural data
@@ -162,6 +171,7 @@ for i=1:nmus
     end
 end
 orient tall
+set_status(handles,'Data plotted in a new window.');
 guidata(hObject, handles); %updates the handles
 
 
@@ -174,13 +184,14 @@ function pushbutton3_Callback(hObject, eventdata, handles)
 % hObject    handle to pushbutton3 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-disp("Extracting NMF")
+set_status(handles,'Extracting NMF...');
 global DATAsrc numsyn_nmf synergy_nmf
 
 synergy_nmf={};
 [nmus,nconds]=size(DATAsrc);
 
     for s=1:nmus
+        set_status(handles,sprintf('Extracting NMF: %d of %d synergies (50 replicates each)...',s,nmus));
         synergy_nmf(s).nsyn=s; %The number of synergies
         [synergy_nmf(s).W,synergy_nmf(s).C,synergy_nmf(s).err,synergy_nmf(s).stdev] = NNMF_stacie_May2013(DATAsrc,s,1);
         [synergy_nmf(s).VAFcond, synergy_nmf(s).VAFmus, synergy_nmf(s).VAF]=funur(DATAsrc,synergy_nmf(s).W,synergy_nmf(s).C); %calculate VAF of reconstruction
@@ -192,7 +203,7 @@ synergy_nmf={};
 [numsyn_nmf]=choosesyns(DATAsrc,synergy_nmf);
 set(handles.NMF_nsyn_toplot,'String',num2str(numsyn_nmf)); %set default number of synergies to plot
 set(handles.PCA_nsyn_toplot,'String',num2str(numsyn_nmf)); %set default number of synergies to plot
-disp("Done Extracting")
+set_status(handles,sprintf('NMF done. %d synergies give VAF >= 90%% and every muscle >= 75%%. Next: Plot NMF muscle synergies.',numsyn_nmf));
 
 function NMF_nsyn_toplot_Callback(hObject, eventdata, handles)
 % hObject    handle to NMF_nsyn_toplot (see GCBO)
@@ -282,6 +293,7 @@ for i=1:nsyn
 end
 orient tall
 
+set_status(handles,sprintf('Plotted %d NMF synergies in a new window.',NMF_nsyn_toplot));
 guidata(hObject, handles); %updates the handles
 
 
@@ -299,6 +311,7 @@ global DATAsrc DATAshuff synergy_nmf synergy_nmf_shuff VAF_CI VAF_CI_shuff
 nboot=100;
 
 %Find the CI for the original data and synergies
+set_status(handles,'VAF CI: bootstrapping the real data (100 resamples)...');
 [VAF_CI]=bootstrap_VAFCI(DATAsrc,synergy_nmf,nboot);
 
 %shuffle the data
@@ -313,6 +326,7 @@ end
 %extract muscle synergies from the shuffled data:
 synergy_nmf_shuff={};
 for s=1:nmus
+    set_status(handles,sprintf('VAF CI: extracting NMF from shuffled data, %d of %d synergies...',s,nmus));
     synergy_nmf_shuff(s).nsyn=s; %The number of synergies
     [synergy_nmf_shuff(s).W,synergy_nmf_shuff(s).C,synergy_nmf_shuff(s).err,synergy_nmf_shuff(s).stdev] = NNMF_stacie_May2013(DATAshuff,s,1);
     [synergy_nmf_shuff(s).VAFcond, synergy_nmf_shuff(s).VAFmus, synergy_nmf_shuff(s).VAF]=funur(DATAshuff,synergy_nmf_shuff(s).W,synergy_nmf_shuff(s).C); %calculate VAF of reconstruction
@@ -320,6 +334,7 @@ for s=1:nmus
 end
 
 %Find the CI for the shuffled data and synergies
+set_status(handles,'VAF CI: bootstrapping the shuffled data...');
 [VAF_CI_shuff]=bootstrap_VAFCI(DATAshuff,synergy_nmf_shuff,nboot);
 
 %plot overall VAF CIs on same plot
@@ -330,6 +345,7 @@ title('overall VAF')
 hold on
 errorbar(1:nmus,mean(VAF_CI_shuff),[(VAF_CI_shuff(2,:)-VAF_CI_shuff(1,:))/2],'LineStyle','none','Color','b') %shuffled data CI in blue
 axis([0 nmus 40 100])
+set_status(handles,'VAF CI done: red = real data, blue = shuffled data (new window).');
 
 
 %***********************************************
@@ -338,7 +354,7 @@ axis([0 nmus 40 100])
 
 % --- Executes on button press in pushbutton4.
 function pushbutton4_Callback(hObject, eventdata, handles)
-disp("Extracting PCA")
+set_status(handles,'Extracting PCA...');
 % hObject    handle to pushbutton4 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -356,7 +372,7 @@ global DATAsrc COEFF SCORE pcvars
 % %space and in the same scaling as the input data was
 % DATAsrc = diag(stdev)*DATAsrc;
 % COEFF = diag(stdev)*COEFF;
-disp("Done Extracting")
+set_status(handles,'PCA done. Next: Plot PCA muscle synergies.');
 
 function PCA_nsyn_toplot_Callback(hObject, eventdata, handles)
 % hObject    handle to PCA_nsyn_toplot (see GCBO)
@@ -437,6 +453,7 @@ end
 orient tall
 
 
+set_status(handles,sprintf('Plotted %d PCA synergies in a new window.',nsyn));
 guidata(hObject, handles); %updates the handles
 
 
@@ -473,6 +490,9 @@ function reconNMF_Callback(hObject, eventdata, handles)
 global whichtrial_NMF synergy_nmf DATAsrc color DATA_LST time checkwalk ncond ntrials nbins
 
 NMF_nsyn_toplot=str2double(get(handles.NMF_nsyn_toplot,'String')); %set default number of synergies to plot
+% Read the trial number from its box so it works without pressing Enter first
+whichtrial_NMF=str2double(get(handles.whichtrialNMF,'String'));
+if isnan(whichtrial_NMF) || whichtrial_NMF<1, whichtrial_NMF=1; end
 
 Wnnmf=synergy_nmf(NMF_nsyn_toplot).W;
 Hnnmf=synergy_nmf(NMF_nsyn_toplot).C;
@@ -569,7 +589,13 @@ elseif checkwalk==1;
         hold off
     end
 end
+% Title the figure with the method, number of synergies and trial
+if checkwalk==0, ttl=sprintf('NMF reconstruction: %d synergies, trial %d',NMF_nsyn_toplot,whichtrial_NMF);
+else, ttl=sprintf('NMF reconstruction: %d synergies',NMF_nsyn_toplot); end
+sgtitle(ttl,'FontWeight','bold');
+set(gcf,'Name',ttl,'NumberTitle','off');
 orient tall
+set_status(handles,sprintf('Reconstruction with %d NMF synergies plotted in a new window.',NMF_nsyn_toplot));
 
 
 
@@ -582,6 +608,9 @@ function reconPCA_Callback(hObject, eventdata, handles)
 global whichtrial_PCA COEFF SCORE DATAsrc color DATA_LST time checkwalk nmus ncond ntrials nbins
 
 PCA_nsyn_toplot=str2double(get(handles.PCA_nsyn_toplot,'String')); %set default number of synergies to plot
+% Read the trial number from its box so it works without pressing Enter first
+whichtrial_PCA=str2double(get(handles.whichtrialPCA,'String'));
+if isnan(whichtrial_PCA) || whichtrial_PCA<1, whichtrial_PCA=1; end
 
 Wpca=COEFF(:,1:PCA_nsyn_toplot);
 Hpca=SCORE(:,1:PCA_nsyn_toplot)';
@@ -683,7 +712,13 @@ elseif checkwalk==1;
         hold off
     end
 end
+% Title the figure with the method, number of synergies and trial
+if checkwalk==0, ttl=sprintf('PCA reconstruction: %d synergies, trial %d',PCA_nsyn_toplot,whichtrial_PCA);
+else, ttl=sprintf('PCA reconstruction: %d synergies',PCA_nsyn_toplot); end
+sgtitle(ttl,'FontWeight','bold');
+set(gcf,'Name',ttl,'NumberTitle','off');
 orient tall
+set_status(handles,sprintf('Reconstruction with %d PCA synergies plotted in a new window.',PCA_nsyn_toplot));
 
 
 
@@ -1052,3 +1087,64 @@ return
 %========================
 % end rsqr_uncentered.m
 
+
+% --- Show a progress message in the GUI's status line and redraw it now.
+function set_status(handles,msg)
+if isfield(handles,'status') && isgraphics(handles.status)
+    set(handles.status,'String',msg);
+    drawnow;
+end
+
+
+% --- Rearrange the controls into a compact window and add the status line.
+% Units are characters. Columns: NMF on the left, PCA on the right.
+function handles=compact_layout(fig,handles)
+% Lay out only once: running the GUI again reuses the open window
+if isappdata(fig,'compactLayout')
+    handles.status=findall(fig,'Tag','status_text');
+    handles.status=handles.status(1);
+    return
+end
+setappdata(fig,'compactLayout',true);
+W=80; H=24;                       % window width and height
+bh=2.1;                           % button height
+xL=3; xR=42; cw=35;               % column x positions and width
+yTop=H-3.2;                       % data row
+y=@(row) yTop-3.8-2.8*row;        % rows of the two columns, top to bottom
+pos=get(fig,'Position');
+set(fig,'Units','characters','Position',[pos(1) pos(2)+pos(4)-H W H]);
+place=@(h,p) set(h,'Units','characters','Position',p);
+% Data row
+place(handles.checkbox_walking,[xL yTop+0.3 18 1.6]);
+place(handles.pushbutton2,[22 yTop 16 bh]);
+place(handles.pushbutton1,[40 yTop 16 bh]);
+% Column headings
+uicontrol(fig,'Style','text','Units','characters','Position',[xL y(0)+2.3 cw 1.4], ...
+    'String','NMF','FontWeight','bold','HorizontalAlignment','left');
+uicontrol(fig,'Style','text','Units','characters','Position',[xR y(0)+2.3 cw 1.4], ...
+    'String','PCA','FontWeight','bold','HorizontalAlignment','left');
+% NMF column
+place(handles.pushbutton3,[xL y(0) cw bh]);
+place(handles.text23,[xL y(1)+0.35 22 1.3]); set(handles.text23,'HorizontalAlignment','left');
+place(handles.NMF_nsyn_toplot,[xL+23 y(1) 8 bh]);
+place(handles.pushbutton9,[xL y(2) cw bh]);
+place(handles.reconNMF,[xL y(3) 14 bh]);
+place(handles.text21,[xL+15 y(3)+0.35 12 1.3]); set(handles.text21,'HorizontalAlignment','left');
+place(handles.whichtrialNMF,[xL+27 y(3) 8 bh]);
+place(handles.pushbutton11,[xL y(4) cw bh]);
+% PCA column
+place(handles.pushbutton4,[xR y(0) cw bh]);
+place(handles.text24,[xR y(1)+0.35 22 1.3]); set(handles.text24,'HorizontalAlignment','left');
+place(handles.PCA_nsyn_toplot,[xR+23 y(1) 8 bh]);
+place(handles.pushbutton10,[xR y(2) cw bh]);
+place(handles.reconPCA,[xR y(3) 14 bh]);
+place(handles.text25,[xR+15 y(3)+0.35 12 1.3]); set(handles.text25,'HorizontalAlignment','left');
+place(handles.whichtrialPCA,[xR+27 y(3) 8 bh]);
+% Show trial 1 as the default in the trial boxes (postural data)
+if isempty(get(handles.whichtrialNMF,'String')), set(handles.whichtrialNMF,'String','1'); end
+if isempty(get(handles.whichtrialPCA,'String')), set(handles.whichtrialPCA,'String','1'); end
+% Status line for progress messages
+handles.status=uicontrol(fig,'Style','text','Units','characters', ...
+    'Position',[xL 0.8 W-2*xL 3.4],'HorizontalAlignment','left','FontSize',11, ...
+    'FontWeight','bold','Tag','status_text', ...
+    'String','Ready. Tick "Walking Data" if needed, then click "Load Data".');
